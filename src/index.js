@@ -1,45 +1,26 @@
-import Phaser from "phaser";
+import Phaser from 'phaser';
+import PlayScene from './scenes/playScene';
+
+const WIDTH = 800;
+const HEIGHT = 600;
+const BIRD_POSITION = { x: WIDTH * 0.1, y: HEIGHT / 2 };
+
+const SHARED_CONFIG = {
+  width: WIDTH,
+  height: HEIGHT,
+  startPosition: BIRD_POSITION
+}
 
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  ...SHARED_CONFIG,
   physics: {
-    default: "arcade",
+    default: 'arcade',
     arcade: {
-      gravity: { y: 400 },
       debug: true,
-    },
+    }
   },
-  scene: {
-    preload,
-    create,
-    update,
-  },
-};
-
-let bird = null;
-let flapVelocity = 250;
-const VELOCITY = 200;
-
-function preload() {
-  this.load.image("sky", "assets/sky.png");
-  this.load.image("bird", "assets/bird.png");
-}
-
-function create() {
-  this.add.image(0, 0, "sky").setOrigin(0, 0);
-  bird = this.physics.add
-    .sprite(config.width / 10, config.height / 2, "bird")
-    .setOrigin(0);
-
-  this.input.keyboard.on("keydown-SPACE", flap);
-}
-
-function update(time, delta) {}
-
-function flap() {
-  bird.body.velocity.y = -flapVelocity;
+  scene: [new PlayScene(SHARED_CONFIG)]
 }
 
 new Phaser.Game(config);
