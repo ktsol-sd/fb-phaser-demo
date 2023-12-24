@@ -13,7 +13,7 @@ class MenuScene extends BaseScene {
     create() {
         super.create()
         this.createMenu(this.menu, (menuItem) => this.setupMenuEvents(menuItem))
-        this.add.text(...this.screenCenter, 'Press W to jump', { fontSize: '34px', fill: '#ff0000' }).setOrigin(0.5, 5)
+        this.add.text(...this.screenCenter, 'Tap/Click to jump', { fontSize: '34px', fill: '#ff0000' }).setOrigin(0.5, 5)
     }
 
     setupMenuEvents(menuItem) {
