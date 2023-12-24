@@ -1,11 +1,3 @@
 # Flappy bird clone w/ phaser.js
 
-## Setup
-
-```bash
-  $ npm install
-```
-
-```bash
-  $ npm run dev
-```
+## You can try it out [here](https://ktsol-sd.github.io/fb-phaser-demo/)
