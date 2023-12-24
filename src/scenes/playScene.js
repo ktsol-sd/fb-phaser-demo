@@ -129,7 +129,7 @@ class PlayScene extends BaseScene {
 
     handleInputs() {
         //this.input.on('pointerdown', this.flap, this);
-        this.input.keyboard.on("keydown-SPACE", this.flap, this);
+        this.input.keyboard.on("keydown-W", this.flap, this);
     }
 
     checkGameStatus() {
