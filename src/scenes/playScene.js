@@ -1,38 +1,61 @@
-import Phaser from 'phaser';
+import BaseScene from "./baseScene";
+
 
 const PIPES_TO_RENDER = 4;
 
-class PlayScene extends Phaser.Scene {
+class PlayScene extends BaseScene {
 
     constructor(config) {
-        super('PlayScene');
-        this.config = config;
+        super('PlayScene', config);
 
         this.bird = null;
         this.pipes = null;
+        this.isPaused = false;
 
         this.pipeHorizontalDistance = 0;
-        this.pipeVerticalDistanceRange = [150, 250];
-        this.pipeHorizontalDistanceRange = [500, 550];
         this.flapVelocity = 320;
 
         this.score = 0;
         this.scoreText = '';
+
+        this.currentDifficulty = 'easy'
+        this.difficulties = {
+            'easy': {
+                pipeHorizontalDistanceRange: [320, 370],
+                pipeVerticalDistanceRange: [150, 200]
+            },
+            'normal': {
+                pipeHorizontalDistanceRange: [300, 350],
+                pipeVerticalDistanceRange: [140, 190]
+            },
+            'hard': {
+                pipeHorizontalDistanceRange: [270, 330],
+                pipeVerticalDistanceRange: [120, 170]
+            }
+        }
     }
 
     preload() {
-        this.load.image('sky', 'assets/sky.png');
-        this.load.image('bird', 'assets/bird.png');
-        this.load.image('pipe', 'assets/pipe.png');
+
     }
 
     create() {
-        this.createBG();
+        super.create();
         this.createBird();
         this.createPipes();
         this.createColliders();
         this.createScore();
+        this.createPause();
         this.handleInputs();
+        this.initEvents();
+
+        this.anims.create({
+            key: 'fly',
+            frames: this.anims.generateFrameNumbers('bird', { start: 8, end: 15 }),
+            frameRate: 8,
+            repeat: -1
+        })
+        this.bird.play('fly')
     }
 
     update() {
@@ -40,12 +63,32 @@ class PlayScene extends Phaser.Scene {
         this.recyclePipes();
     }
 
+    initEvents() {
+        if (this.pauseEvent) { return; }
+        this.pauseEvent = this.events.on('resume', () => {
+            this.initialTime = 3;
+            this.countDownText = this.add.text(...this.screenCenter, 'Fly in ' + this.initialTime, this.fontOptions).setOrigin(0.5)
+            this.timedEvent = this.time.addEvent({ delay: 1000, callback: this.countDown, callbackScope: this, loop: true })
+        })
+    }
+
+    countDown() {
+        this.initialTime--;
+        this.countDownText.setText('Fly in: ' + this.initialTime)
+        if (this.initialTime <= 0) {
+            this.isPaused = false
+            this.countDownText.setText('')
+            this.physics.resume()
+            this.timedEvent.remove();
+        }
+    }
     createBG() {
         this.add.image(0, 0, 'sky').setOrigin(0);
     }
 
     createBird() {
-        this.bird = this.physics.add.sprite(this.config.startPosition.x, this.config.startPosition.y, 'bird').setOrigin(0);
+        this.bird = this.physics.add.sprite(this.config.startPosition.x, this.config.startPosition.y, 'bird').setFlipX(true).setScale(3).setOrigin(0);
+        this.bird.setBodySize(this.bird.width, this.bird.height - 8)
         this.bird.body.gravity.y = 600;
         this.bird.setCollideWorldBounds(true);
     }
@@ -69,7 +112,19 @@ class PlayScene extends Phaser.Scene {
 
     createScore() {
         this.score = 0;
+        const bestScore = localStorage.getItem('bestScore')
         this.scoreText = this.add.text(16, 16, `Score: ${0}`, { fontSize: '32px', fill: '#000' })
+        this.add.text(16, 52, `BestScore: ${bestScore || 0}`, { fontSize: '18px', fill: '#000' })
+    }
+
+    createPause() {
+        this.isPaused = false;
+        const pauseButton = this.add.image(this.config.width - 10, this.config.height - 10, 'pause')
+            .setScale(3)
+            .setOrigin(1)
+            .setInteractive()
+
+        pauseButton.on('pointerdown', () => { this.isPaused = true; this.physics.pause(); this.scene.pause(); this.scene.launch("PauseScene") })
     }
 
     handleInputs() {
@@ -84,10 +139,11 @@ class PlayScene extends Phaser.Scene {
     }
 
     placePipe(uPipe, lPipe) {
+        const difficulty = this.difficulties[this.currentDifficulty];
         const rightMostX = this.getRightMostPipe();
-        const pipeVerticalDistance = Phaser.Math.Between(...this.pipeVerticalDistanceRange);
+        const pipeVerticalDistance = Phaser.Math.Between(...difficulty.pipeVerticalDistanceRange);
         const pipeVerticalPosition = Phaser.Math.Between(0 + 20, this.config.height - 20 - pipeVerticalDistance);
-        const pipeHorizontalDistance = Phaser.Math.Between(...this.pipeHorizontalDistanceRange);
+        const pipeHorizontalDistance = Phaser.Math.Between(...difficulty.pipeHorizontalDistanceRange);
 
         uPipe.x = rightMostX + pipeHorizontalDistance;
         uPipe.y = pipeVerticalPosition;
@@ -104,9 +160,20 @@ class PlayScene extends Phaser.Scene {
                 if (tempPipes.length === 2) {
                     this.placePipe(...tempPipes);
                     this.increaseScore();
+                    this.saveBestScore();
+                    this.increaseDifficulty();
                 }
             }
         })
+    }
+
+    increaseDifficulty() {
+        if (this.score === 25) {
+            this.currentDifficulty = 'normal'
+        }
+        if (this.score === 100) {
+            this.currentDifficulty = 'hard'
+        }
     }
 
     getRightMostPipe() {
@@ -119,10 +186,19 @@ class PlayScene extends Phaser.Scene {
         return rightMostX;
     }
 
+    saveBestScore() {
+        const bestScoreText = localStorage.getItem('bestScore');
+        const bestScore = bestScoreText && parseInt(bestScoreText, 10);
+
+        if (!bestScore || this.score > bestScore) {
+            localStorage.setItem('bestScore', this.score)
+        }
+    }
+
     gameOver() {
         this.physics.pause();
         this.bird.setTint(0xff0000)
-
+        this.saveBestScore()
         this.time.addEvent({
             delay: 1000,
             callback: () => {
@@ -133,6 +209,7 @@ class PlayScene extends Phaser.Scene {
     }
 
     flap() {
+        if (this.isPaused) { return; }
         this.bird.body.velocity.y = -this.flapVelocity;
     }
 
