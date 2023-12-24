@@ -27,3 +27,4 @@ jobs:
         run: npm run deploy
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
